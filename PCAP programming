@@ -24,11 +24,11 @@ void packet_handler(u_char *args, const struct pcap_pkthdr *header, const u_char
             std::cout << "Src Port: " << ntohs(tcp_header->source) << std::endl;
             std::cout << "Dst Port: " << ntohs(tcp_header->dest) << std::endl;
 
-            // 메시지 출력 (예시)
+            // HTTP 메시지 출력
             const u_char *payload = packet + sizeof(struct ether_header) + ip_header_len + tcp_header->doff * 4;
             int payload_len = header->len - (sizeof(struct ether_header) + ip_header_len + tcp_header->doff * 4);
-            std::cout << "Message: ";
-            for (int i = 0; i < payload_len && i < 50; ++i) {  // 최대 50글자 출력
+            std::cout << "HTTP Message: ";
+            for (int i = 0; i < payload_len; ++i) {
                 std::cout << (char)payload[i];
             }
             std::cout << std::endl;
