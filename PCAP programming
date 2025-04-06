@@ -1,0 +1,53 @@
+#include <iostream>
+#include <pcap.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/ether.h>
+
+void packet_handler(u_char *args, const struct pcap_pkthdr *header, const u_char *packet) {
+    struct ether_header *eth_header = (struct ether_header *) packet;
+    if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
+        struct ip *ip_header = (struct ip *) (packet + sizeof(struct ether_header));
+        int ip_header_len = ip_header->ip_hl * 4;
+
+        if (ip_header->ip_p == IPPROTO_TCP) {
+            struct tcphdr *tcp_header = (struct tcphdr *) ((u_char*)ip_header + ip_header_len);
+
+            char src_ip[INET_ADDRSTRLEN], dst_ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(ip_header->ip_src), src_ip, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &(ip_header->ip_dst), dst_ip, INET_ADDRSTRLEN);
+
+            std::cout << "Src MAC: " << ether_ntoa((struct ether_addr *)eth_header->ether_shost) << std::endl;
+            std::cout << "Dst MAC: " << ether_ntoa((struct ether_addr *)eth_header->ether_dhost) << std::endl;
+            std::cout << "Src IP: " << src_ip << std::endl;
+            std::cout << "Dst IP: " << dst_ip << std::endl;
+            std::cout << "Src Port: " << ntohs(tcp_header->source) << std::endl;
+            std::cout << "Dst Port: " << ntohs(tcp_header->dest) << std::endl;
+
+            // 메시지 출력 (예시)
+            const u_char *payload = packet + sizeof(struct ether_header) + ip_header_len + tcp_header->doff * 4;
+            int payload_len = header->len - (sizeof(struct ether_header) + ip_header_len + tcp_header->doff * 4);
+            std::cout << "Message: ";
+            for (int i = 0; i < payload_len && i < 50; ++i) {  // 최대 50글자 출력
+                std::cout << (char)payload[i];
+            }
+            std::cout << std::endl;
+        }
+    }
+}
+
+int main() {
+    char *dev = pcap_lookupdev(nullptr);
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t *handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+
+    if (handle == nullptr) {
+        fprintf(stderr, "Couldn't open device %s: %s\n", dev, errbuf);
+        return 2;
+    }
+
+    pcap_loop(handle, 0, packet_handler, nullptr);
+
+    pcap_close(handle);
+    return 0;
+}
