@@ -72,7 +72,6 @@ int main() {
         return 2;
     }
 
-    // 필터 설정 (tcp port 80만)
     struct bpf_program fp;
     char filter_exp[] = "tcp port 80";
     bpf_u_int32 net;
